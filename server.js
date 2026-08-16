@@ -12,6 +12,8 @@
 const express = require("express");
 const path = require("path");
 const logger = require("./middleware/logger");
+const errorHandler = require("./middleware/errorHandler");
+const httpError = require("./middleware/httpError");
 const taskRoutes = require("./routes/tasks");
 
 const app = express();
@@ -33,6 +35,18 @@ app.use(express.static(path.join(__dirname, "public")));
 // with /tasks, so router.get("/") becomes GET /tasks, and
 // router.get("/:id") becomes GET /tasks/:id.
 app.use("/tasks", taskRoutes);
+
+// ---- Stage 4: centralized error handling ----
+// These MUST come after the routes above.
+
+// Any request that didn't match a route above falls through to here.
+app.use((req, res, next) => {
+  next(httpError(404, `Route not found: ${req.method} ${req.originalUrl}`));
+});
+
+// The single error-handling middleware, registered LAST so every
+// next(err) from anywhere in the app ends up here.
+app.use(errorHandler);
 
 // Start the server and confirm which port it's on.
 app.listen(PORT, () => {

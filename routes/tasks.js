@@ -1,119 +1,143 @@
 // routes/tasks.js
 //
-// STAGE 3: every route now reads and writes tasks.json through the
-// taskStore helper (fs.promises + async/await), so data persists across
-// restarts. Status codes have been corrected to follow REST conventions:
-//   200 OK              - successful GET / PUT
-//   201 Created         - successful POST
-//   204 No Content      - successful DELETE (nothing to return)
-//   400 Bad Request     - invalid input (e.g. missing title)
-//   404 Not Found       - no task with that id
+// STAGE 4: error handling is now centralized. Notice there are no more
+// try/catch blocks or inline error responses in the routes. Instead:
+//
+//   * asyncHandler() wraps each async route so that if it throws (or a
+//     promise rejects), the error is automatically forwarded to Express
+//     with next(err) — no repetitive try/catch in every handler.
+//   * When a route hits a problem (missing task, bad input), it simply
+//     THROWS an httpError with the right status. That error travels to the
+//     single errorHandler middleware registered last in server.js.
+//
+// The result: every route routes its errors through next(err), and one
+// function decides the response.
 
 const express = require("express");
 const { nanoid } = require("nanoid");
 const { readTasks, writeTasks } = require("../data/taskStore");
+const httpError = require("../middleware/httpError");
 
 const router = express.Router();
 
-// Simulates a slow external check for the /verify endpoint (Stage 2).
+// Wraps an async route handler so any rejected promise is passed to
+// next() automatically. This is what lets us throw errors freely inside
+// async routes and have them reach the central error handler.
+function asyncHandler(fn) {
+  return (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+}
+
 function slowCheck(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // GET /tasks — return the whole list.
-router.get("/", async (req, res) => {
-  const tasks = await readTasks();
-  res.status(200).json(tasks);
-});
+router.get(
+  "/",
+  asyncHandler(async (req, res) => {
+    const tasks = await readTasks();
+    res.status(200).json(tasks);
+  })
+);
 
-// GET /tasks/:id/verify — Stage 2, simulated slow verification.
-router.get("/:id/verify", async (req, res) => {
-  try {
+// GET /tasks/:id/verify — simulated slow verification.
+router.get(
+  "/:id/verify",
+  asyncHandler(async (req, res) => {
     const tasks = await readTasks();
     const task = tasks.find((t) => t.id === req.params.id);
-
     if (!task) {
-      return res.status(404).json({ error: "Task not found" });
+      throw httpError(404, "Task not found");
     }
 
     await slowCheck(1500);
 
     if (!task.title || task.title.trim() === "") {
-      throw new Error("Task failed verification: it has no title");
+      // A broken task is bad data — 400. This throw travels to the central
+      // handler instead of crashing the server.
+      throw httpError(400, "Task failed verification: it has no title");
     }
 
     res.status(200).json({ verified: true, task, message: "Task verified successfully" });
-  } catch (err) {
-    res.status(400).json({ verified: false, error: err.message });
-  }
-});
+  })
+);
 
-// GET /tasks/:id — return a single task.
-router.get("/:id", async (req, res) => {
-  const tasks = await readTasks();
-  const task = tasks.find((t) => t.id === req.params.id);
-  if (!task) {
-    return res.status(404).json({ error: "Task not found" });
-  }
-  res.status(200).json(task);
-});
-
-// POST /tasks — create a new task. 201 on success, 400 on bad input.
-router.post("/", async (req, res) => {
-  const { title } = req.body;
-  if (!title || title.trim() === "") {
-    return res.status(400).json({ error: "A title is required" });
-  }
-
-  const tasks = await readTasks();
-  const newTask = {
-    id: nanoid(),
-    title: title.trim(),
-    completed: false,
-    createdAt: new Date().toISOString(),
-  };
-  tasks.push(newTask);
-  await writeTasks(tasks);
-
-  res.status(201).json(newTask);
-});
-
-// PUT /tasks/:id — update a task. 200 on success, 404 if missing.
-router.put("/:id", async (req, res) => {
-  const tasks = await readTasks();
-  const task = tasks.find((t) => t.id === req.params.id);
-  if (!task) {
-    return res.status(404).json({ error: "Task not found" });
-  }
-
-  const { title, completed } = req.body;
-  if (title !== undefined) {
-    if (title.trim() === "") {
-      return res.status(400).json({ error: "Title cannot be empty" });
+// GET /tasks/:id — single task.
+router.get(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    const tasks = await readTasks();
+    const task = tasks.find((t) => t.id === req.params.id);
+    if (!task) {
+      throw httpError(404, "Task not found");
     }
-    task.title = title.trim();
-  }
-  if (completed !== undefined) {
-    task.completed = Boolean(completed);
-  }
+    res.status(200).json(task);
+  })
+);
 
-  await writeTasks(tasks);
-  res.status(200).json(task);
-});
+// POST /tasks — create.
+router.post(
+  "/",
+  asyncHandler(async (req, res) => {
+    const { title } = req.body;
+    if (!title || title.trim() === "") {
+      throw httpError(400, "A title is required");
+    }
 
-// DELETE /tasks/:id — remove a task. 204 No Content on success.
-router.delete("/:id", async (req, res) => {
-  const tasks = await readTasks();
-  const index = tasks.findIndex((t) => t.id === req.params.id);
-  if (index === -1) {
-    return res.status(404).json({ error: "Task not found" });
-  }
+    const tasks = await readTasks();
+    const newTask = {
+      id: nanoid(),
+      title: title.trim(),
+      completed: false,
+      createdAt: new Date().toISOString(),
+    };
+    tasks.push(newTask);
+    await writeTasks(tasks);
 
-  tasks.splice(index, 1);
-  await writeTasks(tasks);
+    res.status(201).json(newTask);
+  })
+);
 
-  // 204 means "success, but there's nothing to send back".
-  res.status(204).end();
-});
+// PUT /tasks/:id — update.
+router.put(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    const tasks = await readTasks();
+    const task = tasks.find((t) => t.id === req.params.id);
+    if (!task) {
+      throw httpError(404, "Task not found");
+    }
+
+    const { title, completed } = req.body;
+    if (title !== undefined) {
+      if (title.trim() === "") {
+        throw httpError(400, "Title cannot be empty");
+      }
+      task.title = title.trim();
+    }
+    if (completed !== undefined) {
+      task.completed = Boolean(completed);
+    }
+
+    await writeTasks(tasks);
+    res.status(200).json(task);
+  })
+);
+
+// DELETE /tasks/:id — remove. 204 No Content on success.
+router.delete(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    const tasks = await readTasks();
+    const index = tasks.findIndex((t) => t.id === req.params.id);
+    if (index === -1) {
+      throw httpError(404, "Task not found");
+    }
+
+    tasks.splice(index, 1);
+    await writeTasks(tasks);
+    res.status(204).end();
+  })
+);
 
 module.exports = router;
