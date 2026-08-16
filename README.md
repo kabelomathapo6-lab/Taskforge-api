@@ -43,12 +43,12 @@ public/index.html         static page that fetches and shows the tasks
 
 ## How it was built (stages)
 
-1. **Stage 1** — Express server, five task routes, custom logging middleware.
-2. **Stage 2** — async `/verify` endpoint using async/await, with error handling
+1. **Stage 1**Express server, five task routes, custom logging middleware.
+2. **Stage 2**async `/verify` endpoint using async/await, with error handling
    so a broken task fails gracefully instead of crashing the server.
-3. **Stage 3** — moved storage from an in-memory array to `tasks.json` using
+3. **Stage 3**moved storage from an in-memory array to `tasks.json` using
    `fs.promises`, added the static page, and corrected REST status codes.
-4. **Stage 4** — centralized all error handling into one middleware, so every
+4. **Stage 4**centralized all error handling into one middleware, so every
    route forwards errors with `next(err)` instead of handling them inline.
 
 ## Notes
