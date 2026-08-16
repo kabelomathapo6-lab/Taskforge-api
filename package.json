@@ -1,0 +1,16 @@
+{
+  "name": "taskforge-api",
+  "version": "1.0.0",
+  "description": "TaskForge REST API - a staged task management backend built with Express",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1",
+    "nanoid": "^3.3.18"
+  }
+}
