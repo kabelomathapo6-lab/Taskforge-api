@@ -1,0 +1,19 @@
+[
+  {
+    "id": "seed-server-setup",
+    "title": "Set up the Express server",
+    "completed": true,
+    "createdAt": "2026-01-10T08:00:00.000Z"
+  },
+  {
+    "id": "seed-five-routes",
+    "title": "Build the five task routes",
+    "completed": false,
+    "createdAt": "2026-01-10T08:05:00.000Z"
+  },
+  {
+    "id": "broken-task",
+    "completed": false,
+    "createdAt": "2026-01-10T08:10:00.000Z"
+  }
+]

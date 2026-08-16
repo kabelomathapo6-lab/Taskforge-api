@@ -10,6 +10,7 @@
 // short and readable.
 
 const express = require("express");
+const path = require("path");
 const logger = require("./middleware/logger");
 const taskRoutes = require("./routes/tasks");
 
@@ -24,15 +25,14 @@ app.use(express.json());
 // EVERY request regardless of method or path.
 app.use(logger);
 
+// Serve the static front-end from the public/ folder. Visiting the base
+// URL now returns public/index.html, which fetches and displays the tasks.
+app.use(express.static(path.join(__dirname, "public")));
+
 // Mount every /tasks route. Anything the router handles is prefixed
 // with /tasks, so router.get("/") becomes GET /tasks, and
 // router.get("/:id") becomes GET /tasks/:id.
 app.use("/tasks", taskRoutes);
-
-// A tiny root route so visiting the base URL isn't a 404.
-app.get("/", (req, res) => {
-  res.json({ message: "TaskForge API is running. Try GET /tasks" });
-});
 
 // Start the server and confirm which port it's on.
 app.listen(PORT, () => {

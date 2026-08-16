@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TaskForge</title>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        background: #0f1115;
+        color: #e7e9ee;
+        min-height: 100vh;
+        padding: 40px 20px;
+      }
+      .wrap { max-width: 620px; margin: 0 auto; }
+      h1 { font-size: 1.6rem; margin: 0 0 4px; }
+      .sub { color: #8a90a2; margin: 0 0 28px; font-size: 0.9rem; }
+      .task {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: #191c23;
+        border: 1px solid #262a34;
+        border-radius: 12px;
+        padding: 14px 16px;
+        margin-bottom: 10px;
+      }
+      .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+      .done { background: #34d399; }
+      .pending { background: #fbbf24; }
+      .title { font-weight: 600; }
+      .meta { color: #6b7180; font-size: 0.78rem; margin-top: 2px; }
+      .badge {
+        margin-left: auto;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 4px 9px;
+        border-radius: 6px;
+      }
+      .badge.done { background: rgba(52, 211, 153, 0.15); color: #34d399; }
+      .badge.pending { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+      .state { color: #8a90a2; text-align: center; padding: 40px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>TaskForge</h1>
+      <p class="sub">Live tasks, fetched from the API.</p>
+      <div id="list"><p class="state">Loading tasks…</p></div>
+    </div>
+
+    <script>
+      // Fetch the tasks from our own API and render them. Because this page
+      // is served by express.static from the same server, we can call /tasks
+      // directly with a relative URL.
+      async function loadTasks() {
+        const list = document.getElementById("list");
+        try {
+          const res = await fetch("/tasks");
+          const tasks = await res.json();
+
+          if (!tasks.length) {
+            list.innerHTML = '<p class="state">No tasks yet.</p>';
+            return;
+          }
+
+          list.innerHTML = tasks
+            .map((t) => {
+              const done = t.completed;
+              const cls = done ? "done" : "pending";
+              const label = done ? "Done" : "Pending";
+              const title = t.title || "(untitled task)";
+              const when = new Date(t.createdAt).toLocaleDateString();
+              return `
+                <div class="task">
+                  <span class="dot ${cls}"></span>
+                  <div>
+                    <div class="title">${title}</div>
+                    <div class="meta">Created ${when}</div>
+                  </div>
+                  <span class="badge ${cls}">${label}</span>
+                </div>`;
+            })
+            .join("");
+        } catch (err) {
+          list.innerHTML = '<p class="state">Could not load tasks.</p>';
+        }
+      }
+
+      loadTasks();
+    </script>
+  </body>
+</html>
