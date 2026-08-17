@@ -5,7 +5,7 @@
 //
 //   * asyncHandler() wraps each async route so that if it throws (or a
 //     promise rejects), the error is automatically forwarded to Express
-//     with next(err) — no repetitive try/catch in every handler.
+//     with next(err) no repetitive try/catch in every handler.
 //   * When a route hits a problem (missing task, bad input), it simply
 //     THROWS an httpError with the right status. That error travels to the
 //     single errorHandler middleware registered last in server.js.
@@ -53,7 +53,7 @@ router.get(
     await slowCheck(1500);
 
     if (!task.title || task.title.trim() === "") {
-      // A broken task is bad data — 400. This throw travels to the central
+      // A broken task is bad data 400. This throw travels to the central
       // handler instead of crashing the server.
       throw httpError(400, "Task failed verification: it has no title");
     }
@@ -62,7 +62,7 @@ router.get(
   })
 );
 
-// GET /tasks/:id — single task.
+// GET /tasks/:id single task.
 router.get(
   "/:id",
   asyncHandler(async (req, res) => {
@@ -98,7 +98,7 @@ router.post(
   })
 );
 
-// PUT /tasks/:id — update.
+// PUT /tasks/:id update.
 router.put(
   "/:id",
   asyncHandler(async (req, res) => {
@@ -124,7 +124,7 @@ router.put(
   })
 );
 
-// DELETE /tasks/:id — remove. 204 No Content on success.
+// DELETE /tasks/:id remove. 204 No Content on success.
 router.delete(
   "/:id",
   asyncHandler(async (req, res) => {
